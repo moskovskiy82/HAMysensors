@@ -63,9 +63,6 @@ bool initialValueSent = false;
 
 void setup()
 {
-  // Fix the PWM timer. Without this the LEDs will flicker.
-  //TCCR0A = _BV(COM0A1) | _BV(COM0B1) | _BV(WGM00);
-
   // Output pins
   pinMode(REDPIN, OUTPUT);
   pinMode(GREENPIN, OUTPUT);
