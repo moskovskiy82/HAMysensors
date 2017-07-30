@@ -224,22 +224,22 @@ void receive(const MyMessage &message) {
       Serial.println("V_HVAC_SPEED");
 
       if(recvData.equalsIgnoreCase("auto")) 
-    {
-     FAN_STATE = 0;
-     HA_FAN_STATE = "Auto";
-    }
+		{
+		 FAN_STATE = 0;
+		 HA_FAN_STATE = "Auto";
+		}
       else if(recvData.equalsIgnoreCase("min")) 
-      {
+	    {
          FAN_STATE = 1;
          HA_FAN_STATE = "Min";
         }
       else if(recvData.equalsIgnoreCase("normal")) 
-      {
+	    {
          FAN_STATE = 2;
          HA_FAN_STATE = "Normal";
         }
       else if(recvData.equalsIgnoreCase("max")) 
-      {
+	    {
          FAN_STATE = 3;
          HA_FAN_STATE = "Max";
         }
@@ -252,25 +252,25 @@ void receive(const MyMessage &message) {
     case V_HVAC_FLOW_STATE:
       Serial.println("V_HVAC_FLOW_STATE");
       if (recvData.equalsIgnoreCase("coolon")) 
-      {
+	    {
          POWER_STATE = 1;
          MODE_STATE = MODE_COOL;
          HA_MODE_STATE = "CoolOn";
         }
       else if (recvData.equalsIgnoreCase("heaton")) 
-      {
+	    {
          POWER_STATE = 1;
          MODE_STATE = MODE_HEAT;
          HA_MODE_STATE = "HeatOn";
         }
       else if (recvData.equalsIgnoreCase("autochangeover")) 
-      {
+	    {
          POWER_STATE = 1;
          MODE_STATE = MODE_AUTO;
          HA_MODE_STATE = "AutoChangeOver";
         }
       else if (recvData.equalsIgnoreCase("off"))
-      {
+	    {
          POWER_STATE = 0;
          HA_MODE_STATE = "Off";
         }
@@ -297,7 +297,7 @@ void receive(const MyMessage &message) {
      Serial.println(message.data);
      val = atoi(message.data);
      if (val == 0 or val == 1) 
-    {
+		{
          on_off_status = val;
          send_status();
          set_hw_status();
@@ -310,11 +310,11 @@ void receive(const MyMessage &message) {
     Serial.println(message.data);
     val = atoi(message.data);
     if (val >= 0 and val <=100) 
-    {
-      dimmerlevel = val;
-      send_status();
-      set_hw_status();
-    }
+		{
+		  dimmerlevel = val;
+		  send_status();
+		  set_hw_status();
+		}
     }
   break;
   case V_VAR1:
@@ -323,9 +323,9 @@ void receive(const MyMessage &message) {
     Serial.println(message.data);
     val = atoi(message.data);
     if (val >= 0 and val <= 2000) 
-    {
-      fadespeed = val;
-    }
+		{
+		  fadespeed = val;
+		}
     }
   break;
   }  
@@ -373,10 +373,10 @@ void set_hw_status()
     float db = (b - b0) / float(fadespeed);
     float dg = (g - g0) / float(fadespeed);
     for (int x = 0;  x < fadespeed; x++) 
-    {
-      set_rgb(r0 + dr*x, g0 + dg*x, b0 + db*x);
-      delay(100);
-    }
+		{
+		  set_rgb(r0 + dr*x, g0 + dg*x, b0 + db*x);
+		  delay(100);
+		}
   }
   set_rgb(r, g, b);
   r0 = r;
