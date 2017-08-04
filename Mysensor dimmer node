@@ -1,0 +1,129 @@
+#define SN "MYS_Koridor"
+#define SV "2.1"
+
+#define MY_NODE_ID 36 //Коридор
+
+#define MY_RADIO_NRF24
+#define MY_REPEATER_FEATURE
+#define MY_RF24_PA_LEVEL (RF24_PA_MAX)
+
+//Disable blinking
+#define MY_DEFAULT_ERR_LED A10
+#define MY_DEFAULT_TX_LED A10
+#define MY_DEFAULT_RX_LED A10
+
+#include <MySensors.h>
+#include <DHT.h> 
+
+//Define connections
+#define CHILD_ID_LED 0
+#define CHILD_ID_HUM 1
+#define CHILD_ID_TEMP 2
+
+#define LED_PIN 6
+
+#define DHT_PIN 7
+
+DHT dht;
+
+//MQ+DHT
+long DHT_Millis = 0;
+long DHT_interval = 60000;
+
+//LED
+#define FADE_DELAY 10
+static int16_t led_currentLevel = 0;  // Current dim level...
+
+MyMessage msgHum(CHILD_ID_HUM, V_HUM);
+MyMessage msgTemp(CHILD_ID_TEMP, V_TEMP);
+MyMessage dimmerMsg(CHILD_ID_LED, V_DIMMER);
+MyMessage lightMsg(CHILD_ID_LED, V_LIGHT);
+
+
+void before() 
+{
+  dht.setup(DHT_PIN);
+}
+void setup()
+{
+request( CHILD_ID_LED, V_DIMMER );
+}
+void presentation()  
+{ 
+  sendSketchInfo(SN, SV);
+  present( CHILD_ID_LED, S_DIMMER );
+  present(CHILD_ID_HUM, S_HUM);
+  present(CHILD_ID_TEMP, S_TEMP);
+}
+
+void loop()
+{
+unsigned long DHT_Current_Millis = millis();
+if((unsigned long)(DHT_Current_Millis - DHT_Millis) >= DHT_interval)
+  {
+    DHT_Millis = DHT_Current_Millis; 
+    delay(dht.getMinimumSamplingPeriod());
+    float temperature = dht.getTemperature();
+    float humidity = dht.getHumidity();
+    if (isnan(temperature)) 
+      {Serial.println("Failed reading temperature from DHT");}
+    if (isnan(humidity)) 
+      {Serial.println("Failed reading humidity from DHT");}
+    else 
+    {
+      send(msgTemp.set(temperature, 1));
+      send(msgHum.set(humidity, 1));
+      Serial.print("T: ");
+      Serial.println(temperature);
+      Serial.print("H: ");
+      Serial.println(humidity);
+    }
+  }
+
+}
+
+void receive(const MyMessage &message)
+{
+    if (message.type == V_LIGHT || message.type == V_DIMMER) {
+
+        //  Retrieve the power or dim level from the incoming request message
+        int requestedLevel = atoi( message.data );
+
+        // Adjust incoming level if this is a V_LIGHT variable update [0 == off, 1 == on]
+        requestedLevel *= ( message.type == V_LIGHT ? 100 : 1 );
+
+        // Clip incoming level to valid range of 0 to 100
+        requestedLevel = requestedLevel > 100 ? 100 : requestedLevel;
+        requestedLevel = requestedLevel < 0   ? 0   : requestedLevel;
+
+        Serial.print( "Changing level to " );
+        Serial.print( requestedLevel );
+        Serial.print( ", from " );
+        Serial.println( led_currentLevel );
+
+        fadeToLevel( requestedLevel );
+
+        // Inform the gateway of the current DimmableLED's SwitchPower1 and LoadLevelStatus value...
+        send(lightMsg.set(led_currentLevel > 0));
+
+        // hek comment: Is this really nessesary?
+        send( dimmerMsg.set(led_currentLevel) );
+
+
+    }
+}
+
+/***
+ *  This method provides a graceful fade up/down effect
+ */
+void fadeToLevel( int toLevel )
+{
+
+    int delta = ( toLevel - led_currentLevel ) < 0 ? -1 : 1;
+
+    while ( led_currentLevel != toLevel ) {
+        led_currentLevel += delta;
+        analogWrite( LED_PIN, (int)(led_currentLevel / 100. * 255) );
+        delay( FADE_DELAY );
+    }
+}
