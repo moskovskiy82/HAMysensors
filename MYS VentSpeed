@@ -1,0 +1,105 @@
+#define SN "Ventilation speed"
+#define SV "2.1"
+
+//System settings
+#define MY_DEFAULT_ERR_LED A10  //надо бы включить!!!
+#define MY_DEFAULT_TX_LED A10 //Отключаем LED
+#define MY_DEFAULT_RX_LED A10 //Отключаем LED
+#define MY_RADIO_NRF24
+
+#include <MySensors.h> 
+#include <SPI.h>
+#include <DHT.h> 
+#include <math.h>
+#include <Wire.h>
+#include <Bounce2.h>
+
+#define MY_NODE_ID 55
+//#define MY_REPEATER_FEATURE //Switch on to enable repeater
+
+#define RELAY_1  4  // Arduino Digital I/O pin number for first relay (second on pin+1 etc)
+#define NUMBER_OF_RELAYS 4 // Total number of attached relays
+#define RELAY_ON 1  // GPIO value to write to turn on attached relay
+#define RELAY_OFF 0 // GPIO value to write to turn off attached relay
+
+#define CHILD_ID_HUM 5
+#define CHILD_ID_TEMP 6
+#define CHILD_ID_MQ 7
+#define HUMIDITY_SENSOR_DIGITAL_PIN 2
+const int MQ_Pin = A4;
+
+DHT dht;
+long MQ2_Millis = 0;
+long MQ2_interval = 60000;
+long DHT_Millis = 0;
+long DHT_interval = 60000;
+
+MyMessage msgHum(CHILD_ID_HUM, V_HUM);
+MyMessage msgTemp(CHILD_ID_TEMP, V_TEMP);
+MyMessage msgMQ(CHILD_ID_MQ, V_LEVEL);
+
+void before() 
+{
+  dht.setup(HUMIDITY_SENSOR_DIGITAL_PIN); 
+for (int sensor=1, pin=RELAY_1; sensor<=NUMBER_OF_RELAYS;sensor++, pin++)
+  {
+  pinMode(pin, OUTPUT);
+  digitalWrite(pin, loadState(sensor)?RELAY_ON:RELAY_OFF);
+  }
+}
+void setup()  
+{ }
+
+
+void presentation()  
+{ 
+  present(CHILD_ID_HUM, S_HUM);
+  present(CHILD_ID_TEMP, S_TEMP);
+  present(CHILD_ID_MQ, S_AIR_QUALITY);
+for (int sensor=1, pin=RELAY_1; sensor<=NUMBER_OF_RELAYS;sensor++, pin++)
+  {
+  present(sensor, S_LIGHT);
+  }
+}
+void loop() 
+{ 
+  unsigned long DHT_Current_Millis = millis();
+  if(DHT_Current_Millis - DHT_Millis > DHT_interval)
+    {
+    DHT_Millis = DHT_Current_Millis;
+    delay(dht.getMinimumSamplingPeriod());
+    float temperature = dht.getTemperature();
+    float humidity = dht.getHumidity();
+    if (isnan(temperature)) 
+      { Serial.println("Failed reading temperature from DHT"); } 
+    if (isnan(humidity)) 
+      { Serial.println("Failed reading humidity from DHT"); } 
+    else
+      {
+      send(msgTemp.set(temperature, 1));
+      send(msgHum.set(humidity, 1));
+      }
+    }
+  unsigned long MQ2_Current_Millis = millis();
+  if(MQ2_Current_Millis - MQ2_Millis > MQ2_interval)
+    {
+    float mq_reading = analogRead(MQ_Pin);
+    MQ2_Millis = MQ2_Current_Millis;
+    if (isnan(mq_reading))
+    { Serial.println("Failed mq_reading"); }
+    else
+    { send(msgMQ.set(mq_reading, 1)); }
+    }
+}
+void receive(const MyMessage &message) 
+{
+  if (message.type==V_STATUS) 
+  {
+  digitalWrite(message.sensor-1+RELAY_1, message.getBool()?RELAY_ON:RELAY_OFF); // Change relay state
+  saveState(message.sensor, message.getBool()); // Store state in eeprom
+  Serial.print("Incoming change for sensor:");
+  Serial.print(message.sensor);
+  Serial.print(", New status: ");
+  Serial.println(message.getBool());
+  } 
+}
